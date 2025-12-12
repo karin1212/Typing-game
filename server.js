@@ -2,7 +2,8 @@ import { Hono } from 'jsr:@hono/hono';
 import { serveStatic } from 'jsr:@hono/hono/deno';
 
 // 認証トークン（JWT）
-import { jwt, sign } from 'jsr:@hono/hono/jwt';
+import { jwt, sign, verify as verifyJwt } from 'jsr:@hono/hono/jwt'; // verifyをverifyJwtにリネームしてインポート
+import { HTTPException } from 'jsr:@hono/hono/http-exception';
 
 // クッキー
 import { setCookie, deleteCookie, getCookie } from 'jsr:@hono/hono/cookie';
@@ -116,13 +117,39 @@ app.get('/api/check', async (c) => {
   return c.json({ username });
 });
 
-/*
- * API
- */
+/*** API ***/
+app.get('/api/questions', async (c) => {
+  // ログインチェックはjwtミドルウェアによって既に実行済み
+  try {
+    // カテゴリ27(動物), 難易度Medium, 10問の英語の質問を取得
+    const opentdbUrl =
+      'https://opentdb.com/api.php?amount=10&category=27&difficulty=medium&type=multiple&encode=base64';
+    const res = await fetch(opentdbUrl);
+
+    if (!res.ok) {
+      throw new Error('OpenTDBからのデータ取得に失敗しました。');
+    }
+
+    const data = await res.json(); // base64デコード処理
+
+    const decodedResults = data.results.map((q) => {
+      return {
+        // 質問文だけを抜き出す
+        question: atob(q.question)
+      };
+    });
+
+    return c.json(decodedResults);
+  } catch (error) {
+    console.error('質問取得エラー:', error);
+    c.status(500);
+    return c.json({ message: 'サーバー側で質問の取得に失敗しました。' });
+  }
+});
 
 /* 連番のIDを生成する関数 */
 async function getNextId() {
-  const key = ['counter', 'pokemons'];
+  const key = ['counter', 'scores'];
   const res = await kv.atomic().sum(key, 1n).commit();
   if (!res.ok) {
     console.error('IDの生成に失敗しました。');
@@ -133,81 +160,55 @@ async function getNextId() {
   return Number(counter.value);
 }
 
-/*** リソースの作成 ***/
-app.post('/api/pokemons', async (c) => {
+/*** スコアの保存 ***/
+app.post('/api/scores', async (c) => {
   // JWTからユーザー名を取得
   const payload = c.get('jwtPayload');
   const username = payload.sub;
 
-  // 作成するポケモンデータの取得
-  const body = await c.req.parseBody();
-  const record = JSON.parse(body['record']);
+  // スコアデータの取得
+  const { score, wpm, accuracy } = await c.req.json();
+  if (score === undefined || wpm === undefined || accuracy === undefined) {
+    c.status(400);
+    return c.json({ message: 'スコアデータが不足しています。' });
+  }
 
   // IDと生成時刻を生成してレコードに追加
-  const pokemonId = await getNextId();
-  record['id'] = pokemonId;
-  record['createdAt'] = new Date().toISOString();
+  const scoreId = await getNextId();
+  const record = {
+    id: scoreId,
+    username,
+    score: score,
+    wpm: wpm,
+    accuracy: accuracy,
+    createdAt: new Date().toISOString()
+  };
 
-  // リソースの作成
-  await kv.set(['pokemons', username, pokemonId], record);
+  // リソースの作成 (キー: ['scores', ユーザー名, スコアID])
+  await kv.set(['scores', username, scoreId], record);
 
   // レスポンスの作成
   c.status(201); // 201 Created
-  c.header('Location', `/pokemons/${pokemonId}`);
 
-  return c.json({ record });
+  return c.json({ message: 'スコアを保存しました。', record });
 });
 
-/*** コレクションの取得 ***/
-app.get('/api/pokemons', async (c) => {
-  const payload = c.get('jwtPayload');
-  const username = payload.sub;
+/*** ハイスコアランキングの取得 ***/
+app.get('/api/scores/ranking', async (c) => {
+  // ログインは必須ではないが、データの取得は必要
+  // ユーザー認証ミドルウェアを通っているので、認証されていればpayloadがある
 
-  // ユーザー名もprefixに入れて、ログインユーザーのデータのみを取得する
-  const pkmns = await kv.list({ prefix: ['pokemons', username] });
+  // 全ユーザーのスコアデータを取得し、ソートする (簡易実装)
+  // Deno KVで効率的なランキング取得は複雑なため、ここでは全件取得後、WPMでソートする簡易な方法を採用します
+  const allScores = [];
+  const iter = kv.list({ prefix: ['scores'] });
+  for await (const entry of iter) {
+    allScores.push(entry.value);
+  } // WPM (Words Per Minute) の降順でソート
 
-  // リソースがあったとき
-  const pkmnList = await Array.fromAsync(pkmns);
-  if (pkmnList.length > 0) {
-    return c.json(pkmnList.map((e) => e.value));
-  }
-  // リソースがなかったとき
-  else {
-    c.status(404); // 404 Not Found
-    return c.json({ message: 'pokemonコレクションのデータは1つもありませんでした。' });
-  }
-});
+  allScores.sort((a, b) => b.wpm - a.wpm); // 上位10件を返す
 
-/* レコードリストの削除（授業用） */
-app.delete('/api/pokemons', async (c) => {
-  const payload = c.get('jwtPayload');
-  const username = payload.sub;
-
-  const deleteList = await kv.list({ prefix: ['pokemons', username] });
-
-  // レコードを一括で削除する
-  const atomic = kv.atomic();
-  for await (const entry of deleteList) atomic.delete(entry.key);
-  const result = await atomic.commit();
-
-  // レスポンス
-  if (result.ok) {
-    await kv.delete(['counter', 'pokemons']); // 連番IDをリセット
-    c.status(); // 204 No Content
-    return c.body(null);
-  } else {
-    c.status(503); // 503 Service Unavailable
-    return c.json({ message: 'リソースの一括削除に失敗しました。' });
-  }
-});
-
-// ユーザーアカウントの一括削除（勉強用）
-app.delete('/api', async (c) => {
-  const deleteList = await kv.list({ prefix: ['users'] });
-  const atomic = kv.atomic();
-  for await (const e of deleteList) atomic.delete(e.key);
-  await atomic.commit();
-  return c.body(null);
+  return c.json(allScores.slice(0, 10));
 });
 
 /*
@@ -220,6 +221,29 @@ app.on('GET', ['/signup.html', '/login.html'], async (c, next) => {
   if (token) {
     return c.redirect('/index.html'); // アプリページへリダイレクト
   }
+  await next();
+});
+
+// 認証が必要なページへのアクセス制御（index -> login）
+// `serveStatic`の前に配置し、HTMLファイルへのリクエストを検出する
+app.on('GET', ['/', '/index.html'], async (c, next) => {
+  const token = getCookie(c, COOKIE_NAME); // トークンが存在し、かつ有効なJWTであるか確認（簡易的な検証）
+  let isAuthenticated = false;
+  if (token && JWT_SECRET) {
+    try {
+      // ここでトークンの有効期限や署名を検証
+      await verifyJwt(token, JWT_SECRET);
+      isAuthenticated = true;
+    } catch (_e) {
+      // トークンが無効または期限切れの場合は、認証失敗とする
+      deleteCookie(c, COOKIE_NAME, { path: '/', httpOnly: true, secure: false, sameSite: 'Strict' });
+    }
+  } // 認証されていない場合、ログインページへリダイレクト
+
+  if (!isAuthenticated) {
+    // ログアウト後にindex.htmlにアクセスしようとした場合もここでリダイレクト
+    return c.redirect('/login.html');
+  } // 認証済みの場合は次のミドルウェアへ
   await next();
 });
 
