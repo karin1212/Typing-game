@@ -3,174 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>タイピングゲーム</title>
+    <title>クライアントサイド</title>
     <link href="style.css" rel="stylesheet" />
   </head>
 
   <body>
-    <!-- prettier-ignore -->
-    <div class="status-info">
-      ユーザー: <span id="loginUser"></span>
-      （<span id="logout">ログアウト</span>）
-    </div>
+    <header>
+      <h1>タイピングゲーム</h1>
+      <div id="user-info">
+        <span id="username-display"></span>
+        <button id="logout-button">ログアウト</button>
+      </div>
+    </header>
 
-    <section>
-      <div id="create">
-        <!-- prettier-ignore -->
-        <form>
-          <div class="row">
-            <label>名前：</label><input name="name" />
-          </div>
-          <div class="row">
-            <label>タイプ：</label>
-            <div class="radio">
-              <input type="radio" name="type" value="水" />水 &nbsp;
-              <input type="radio" name="type" value="炎" />炎 &nbsp;
-              <input type="radio" name="type" value="草" />草 &nbsp;
-              <input type="radio" name="type" value="氷" />氷 &nbsp;
-              <input type="radio" name="type" value="悪" />悪
-            </div>
-          </div>
-          <div class="row">
-            <label>レベル：</label><input type="number" name="level" />
-          </div>
-          <div class="row">
-            <label>愛称：</label><input name="nickname" />
-          </div>
-          <div class="cap"><button type="submit">作成</button></div>
-        </form>
+    <main>
+      <div id="game-area">
+        <button id="start-button">ゲームスタート</button>
+        <div id="question-area" class="hidden">
+          <p>タイピングする問題:</p>
+          <div id="display-text"></div>
+          <input type="text" id="input-field" disabled placeholder="スタートボタンを押してください" />
+        </div>
+        <div id="stats-area" class="hidden">
+          <p>時間: <span id="timer">0</span>秒</p>
+          <p>WPM (Words Per Minute): <span id="wpm-display">0</span></p>
+          <p>正解数: <span id="correct-count">0</span> / <span id="total-count">0</span></p>
+          <p>正答率: <span id="accuracy-display">0%</span></p>
+        </div>
       </div>
 
-      <div id="display">
-        <!-- prettier-ignore -->
-        <table>
-          <caption>ポケモン一覧</caption>
-          <thead><tr>
-            <th>ID</th><th>名前</th><th>タイプ</th><th>レベル</th><th>愛称</th>
-          </tr></thead>
+      <section id="ranking-area">
+        <h2>🏆 ハイスコアランキング (WPM)</h2>
+        <p id="ranking-status">ランキングを読み込み中...</p>
+        <table id="ranking-table" class="hidden">
+          <thead>
+            <tr>
+              <th>順位</th>
+              <th>ユーザー名</th>
+              <th>WPM</th>
+              <th>正答率</th>
+              <th>スコア</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
-      </div>
-    </section>
+      </section>
+    </main>
 
-    <!-- ↓この機能は本来推奨されない -->
-    <div id="deleteAll">
-      <button>すべてのデータを削除</button>
-    </div>
+    <script src="script.js"></script>
   </body>
-
-  <script>
-    /* ポケモン一覧（table要素）を更新 */
-    async function updateTable() {
-      const tbody = document.querySelector('#display tbody');
-      tbody.innerHTML = '';
-
-      // レコードのリストを取得
-      const res = await fetch('/api/pokemons');
-      if (!res.ok) return;
-      const list = await res.json();
-
-      // tbody要素を更新
-      for (const record of list) {
-        const { id, name, type, level, nickname } = record;
-        const fields = [id, name, type, level, nickname];
-
-        // テーブルの更新
-        const tr = document.createElement('tr');
-        tbody.appendChild(tr);
-        for (const entry of fields) {
-          const td = document.createElement('td');
-          td.textContent = entry;
-          tr.appendChild(td);
-        }
-      }
-    }
-
-    /* ページ読み込み時にログイン状態を確認 */
-    document.addEventListener('DOMContentLoaded', async () => {
-      // 確認
-      const res = await fetch('/api/check');
-
-      // ログインしていたらユーザー名を表示
-      if (res.ok) {
-        const data = await res.json();
-        const loginUser = document.getElementById('loginUser');
-        loginUser.textContent = `${data.username} さん`;
-        updateTable(); // 一覧表示
-      }
-      // ログインしていなければ1秒後に login.html にリダイレクト
-      else {
-        document.body.innerHTML = '<h1>ログインページに移動します</h1>';
-        setTimeout(function () {
-          location.href = 'login.html';
-        }, 1000); // 1秒後
-      }
-    });
-
-    /* ログアウト */
-    document.getElementById('logout').addEventListener('click', logout);
-    async function logout() {
-      const res = await fetch('/api/logout', { method: 'POST' });
-      if (res.ok) location.href = 'login.html';
-    }
-
-    /*** リソースを作成 ***/
-    document.querySelector('#create button').addEventListener('click', createData);
-    async function createData(ev) {
-      // form送信を停止
-      ev.preventDefault();
-
-      // フォーム入力の取得 → メッセージボディの作成
-      const form = document.querySelector('#create form');
-      const record = {
-        name: form.name.value,
-        type: form.type.value,
-        level: form.level.value,
-        nickname: form.nickname.value
-      };
-      for (const key in record) {
-        if (!record[key]) {
-          window.alert('すべての項目を入力してください。');
-          return;
-        }
-      }
-      const body = new FormData();
-      body.append('record', JSON.stringify(record));
-
-      // フォームをクリア
-      form.name.value = '';
-      form.type.value = false;
-      form.level.value = '';
-      form.nickname.value = '';
-
-      // POSTリクエスト
-      const res = await fetch('/api/pokemons', {
-        method: 'POST',
-        body: body
-      });
-
-      // レスポンスの確認
-      const created = await res.json();
-      if (res.ok) {
-        console.log(JSON.stringify(created, null, 2));
-      } else {
-        console.warn(created.message);
-        return;
-      }
-
-      // テーブルを更新
-      updateTable();
-    }
-
-    /* リソースをすべて削除 */
-    document.querySelector('#deleteAll button').addEventListener('click', deleteDataAll);
-    async function deleteDataAll() {
-      const res = await fetch('/api/pokemons', { method: 'DELETE' });
-      if (res.ok) {
-        updateTable();
-      } else {
-        console.warn(updated.message);
-      }
-    }
-  </script>
 </html>
