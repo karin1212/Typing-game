@@ -121,27 +121,28 @@ app.get('/api/check', async (c) => {
 app.get('/api/questions', async (c) => {
   // ログインチェックはjwtミドルウェアによって既に実行済み
   try {
-    // カテゴリ27(動物), 難易度Medium, 10問の英語の質問を取得
-    const opentdbUrl =
-      'https://opentdb.com/api.php?amount=10&category=27&difficulty=medium&type=multiple&encode=base64';
+    // 質問の量を10問から5問に減らし、カテゴリ27(動物)の複数選択式を取得
+    // encode=base64はそのまま (文字化け対策)
+    const opentdbUrl = 'https://opentdb.com/api.php?amount=5&category=27&difficulty=medium&type=multiple&encode=base64';
     const res = await fetch(opentdbUrl);
 
     if (!res.ok) {
       throw new Error('OpenTDBからのデータ取得に失敗しました。');
     }
 
-    const data = await res.json(); // base64デコード処理
+    const data = await res.json(); // 質問文と正解の文字列だけをデコードして抽出
 
     const decodedResults = data.results.map((q) => {
       return {
-        // 質問文だけを抜き出す
-        question: atob(q.question)
+        // 質問文
+        question: atob(q.question), // 正解の文字列をタイピングさせる
+        answer: atob(q.correct_answer)
       };
     });
 
     return c.json(decodedResults);
   } catch (error) {
-    console.error('質問取得エラー:', error);
+    console.error('取得エラー:', error);
     c.status(500);
     return c.json({ message: 'サーバー側で質問の取得に失敗しました。' });
   }
