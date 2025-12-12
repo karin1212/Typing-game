@@ -1,0 +1,182 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f9;
+  color: #333;
+  text-align: center;
+}
+
+header {
+  background-color: #394264;
+  color: white;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.5em;
+}
+
+#user-info {
+  display: flex;
+  align-items: center;
+}
+
+#username-display {
+  margin-right: 15px;
+  font-weight: bold;
+}
+
+#logout-button {
+  padding: 8px 15px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+main {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* --- ゲームエリア --- */
+#game-area {
+  margin-bottom: 30px;
+}
+
+#start-button {
+  padding: 15px 30px;
+  font-size: 1.2em;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#start-button:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+#display-text {
+  font-size: 1.5em;
+  padding: 20px;
+  margin: 20px 0;
+  min-height: 40px;
+  border: 2px solid #ccc;
+  border-radius: 5px;
+  text-align: left;
+  white-space: pre-wrap; /* テキストの改行を保持 */
+}
+
+#display-text span {
+  transition: background-color 0.1s, color 0.1s;
+}
+
+#input-field {
+  width: calc(100% - 40px);
+  padding: 15px 20px;
+  font-size: 1.2em;
+  border: 2px solid #3498db;
+  border-radius: 5px;
+  margin-top: 10px;
+}
+
+#input-field:focus {
+  outline: none;
+  border-color: #2980b9;
+}
+
+/* タイピングのフィードバック */
+#display-text span.next {
+  background-color: #f1c40f; /* 次に入力すべき文字の背景 */
+  border-radius: 2px;
+}
+
+#display-text span.correct {
+  color: #2ecc71; /* 正解の文字色 */
+  font-weight: bold;
+}
+
+#display-text span.incorrect {
+  color: white;
+  background-color: #e74c3c; /* 不正解の背景色 */
+  text-decoration: underline;
+  font-weight: bold;
+}
+
+/* --- 統計情報 --- */
+#stats-area {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #ecf0f1;
+  border-radius: 5px;
+  text-align: left;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+}
+
+#stats-area p {
+  margin: 5px 10px;
+  font-size: 1.1em;
+  font-weight: 500;
+}
+
+#stats-area span {
+  font-weight: bold;
+  color: #34495e;
+}
+
+/* --- ランキング --- */
+#ranking-area {
+  margin-top: 40px;
+  border-top: 1px solid #ccc;
+  padding-top: 20px;
+}
+
+#ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+#ranking-table th,
+#ranking-table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: center;
+}
+
+#ranking-table th {
+  background-color: #3498db;
+  color: white;
+}
+
+#ranking-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+#ranking-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+#ranking-status {
+  color: #888;
+  padding: 10px;
+}
