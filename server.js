@@ -148,6 +148,34 @@ app.get('/api/questions', async (c) => {
   }
 });
 
+// スコア保存用のAPI
+app.post('/api/scores', async (c) => {
+  const payload = c.get('jwtPayload');
+  const username = payload.sub;
+  const { score, total } = await c.req.json(); // ゲーム画面から送られてくるデータ
+
+  const record = {
+    username,
+    score,
+    total,
+    date: new Date().toLocaleString('ja-JP')
+  };
+
+  // Deno KVに保存 (キー: scores, ユーザー名, 日時)
+  await kv.set(['scores', username, Date.now()], record);
+  return c.json({ message: 'スコアを保存しました', record });
+});
+
+// スコア一覧取得用のAPI
+app.get('/api/scores', async (c) => {
+  const payload = c.get('jwtPayload');
+  const username = payload.sub;
+  const entries = await kv.list({ prefix: ['scores', username] });
+  const history = [];
+  for await (const entry of entries) history.push(entry.value);
+  return c.json(history);
+});
+
 /* 連番のIDを生成する関数 */
 async function getNextId() {
   const key = ['counter', 'scores'];

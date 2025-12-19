@@ -87,13 +87,11 @@ const inputField = document.getElementById('input-field');
 let questions = []; // 取得した問題リスト (questionとanswerを含む)
 let currentQuestionIndex = 0; // 現在の問題番号
 
-// *** 変更点1: currentTextをcurrentAnswerに変更し、正解文字列を保持する ***
 let currentAnswer = ''; // 現在の正解文字列
 let expectedKey = ''; // 次に入力すべき文字
 let startTime = 0; // 開始時刻
 let timerInterval = null; // タイマー
 
-// *** 変更点2: ゲーム全体の入力統計情報を保持する変数はそのまま ***
 let correctChars = 0; // 正しく入力した文字数 (全問題合計)
 let totalChars = 0; // 総入力文字数（間違いを含む、全問題合計）
 
@@ -160,11 +158,9 @@ function showNextQuestion() {
 
   const currentQ = questions[currentQuestionIndex];
 
-  // *** 変更点3: displayTextには質問文を表示する ***
   const rawQuestion = currentQ.question;
   const decodedQuestion = decodeHtmlEntities(rawQuestion);
 
-  // *** 変更点4: currentAnswerに正解文字列を格納する ***
   currentAnswer = decodeHtmlEntities(currentQ.answer);
 
   // 質問文を単なるテキストとして表示
@@ -179,12 +175,6 @@ function showNextQuestion() {
     .split('')
     .map(() => '_')
     .join(' ');
-
-  // 最初の文字をハイライト (今回は入力フィールドの文字と正解の文字を比較するため、
-  // displayText の文字をハイライトする必要はない)
-  // ただし、入力フィードバックは実装しないと難しすぎるため、入力した文字と比較する方法に変更する
-
-  // *** 変更点5: Input Event Listener側で文字単位のフィードバックロジックを変更する ***
 }
 
 // 入力イベントの処理 (大幅変更)
@@ -222,22 +212,6 @@ inputField.addEventListener('input', (e) => {
 
     feedbackHTML += charSpan;
   }
-
-  // Q&A表示の下に入力フィードバック専用のエリアを作成する (index.htmlも修正が必要)
-  // 一時的に displayText にフィードバックを表示させる
-  // (displayText には既に質問文が表示されているため、これは望ましくない。
-  // index.html に #feedback-text エリアが必要)
-
-  // *** index.htmlに #feedback-text を追加する前提で、ここでフィードバックを行うと仮定 ***
-  // 既存の displayText にフィードバックも表示すると質問文が消えてしまうので、
-  // ここでは、一旦ロジックに集中し、全入力文字数と正解文字数の比較を行う
-
-  // *** 既存のロジックとの整合性を取るため、全文字数と正解文字数のカウントを行う ***
-  // (ここでは、今回の入力における正誤判定ではなく、全体の統計情報を更新)
-
-  // 正しく入力した文字数(correctChars)は、**ゲーム開始後**からの累計であるため、
-  // ここで直接更新するのは難しい。→ 全問終了時にのみスコア計算を行う。
-  // *一旦、正解を最後まで入力したときのみ、次の問題に進む簡単なロジックを採用します。*
 
   if (currentLength > 0 && currentLength <= answerLength) {
     // 現在の問題の正解文字数を一時的にカウント
