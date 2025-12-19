@@ -83,6 +83,7 @@ const questionArea = document.getElementById('question-area');
 const statsArea = document.getElementById('stats-area');
 const displayText = document.getElementById('display-text');
 const inputField = document.getElementById('input-field');
+const skipButton = document.getElementById('skip-button');
 
 let questions = []; // 取得した問題リスト (questionとanswerを含む)
 let currentQuestionIndex = 0; // 現在の問題番号
@@ -105,21 +106,34 @@ const accuracyDisplay = document.getElementById('accuracy-display');
 
 // ゲームスタート
 startButton.addEventListener('click', async () => {
-  // ... (問題取得とゲーム初期化のコードは変更なし) ...
   startButton.disabled = true;
-  startButton.textContent = '問題を読み込み中...';
+  startButton.textContent = '問題を読み込み、翻訳中...'; // メッセージを変更
 
   try {
     const res = await fetch('/api/questions');
     if (!res.ok) {
       throw new Error('質問の取得に失敗しました。');
     }
-    questions = await res.json();
+    const rawQuestions = await res.json(); // 一旦変数に受ける
 
-    if (questions.length === 0) {
+    if (rawQuestions.length === 0) {
       alert('問題が取得できませんでした。');
       return;
     }
+
+    // Promise.all を使って、全問題を並列で翻訳します
+    questions = await Promise.all(
+      rawQuestions.map(async (q) => {
+        // 問題文と回答をデコードしてから翻訳に回す
+        const decodedQ = decodeHtmlEntities(q.question);
+        const decodedA = decodeHtmlEntities(q.answer);
+
+        return {
+          question: await translateToJapanese(decodedQ),
+          answer: await translateToJapanese(decodedA)
+        };
+      })
+    );
 
     // ゲーム初期化
     currentQuestionIndex = 0;
@@ -127,6 +141,7 @@ startButton.addEventListener('click', async () => {
     totalChars = 0;
     startTime = Date.now();
     clearInterval(timerInterval);
+    skipButton.classList.remove('hidden'); // スキップボタンを表示
 
     // UI表示
     startButton.classList.add('hidden');
@@ -234,42 +249,26 @@ inputField.addEventListener('input', (e) => {
   // 全て入力が完了し、かつ正解しているかチェック
   if (currentLength === answerLength) {
     if (inputText === currentAnswer) {
+      // ✅ 正解した瞬間にだけ統計を更新する
+      updateStats();
+
       alert(`✅ 正解！次の問題へ`);
       currentQuestionIndex++;
-
-      // 次の問題を少し遅延させて表示
       setTimeout(showNextQuestion, 100);
       return;
-    } else if (currentLength > answerLength) {
-      // 入力が正解を超えたら、それ以上入力できないようにする
-      inputField.value = currentAnswer;
     }
   }
-
-  // 統計情報の更新
   updateStats();
 });
 
-// 次に入力すべき文字をハイライト (この関数はAnswerタイピング形式では使われない)
-function highlightNextChar(index) {
-  // Answerタイピング形式では使用しないため、空にするか削除する
-}
-
 // 統計情報を更新し、ゲームが終了した場合はスコアを送信
 function updateStats() {
-  // ... (元の updateStats 関数は変更なし) ...
   const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-  const accuracy = totalChars > 0 ? (correctChars / totalChars) * 100 : 0;
 
-  // WPM: 5文字を1ワードとして、経過秒数から計算 (WPM = (正解文字数 / 5) / (経過時間 / 60))
-  const wpm = elapsedSeconds > 0 ? correctChars / 5 / (elapsedSeconds / 60) : 0;
-
-  // UI更新
+  // UI更新（タイマーだけ常に更新）
   timerDisplay.textContent = elapsedSeconds;
-  wpmDisplay.textContent = wpm.toFixed(0);
-  correctCountDisplay.textContent = correctChars;
-  totalCountDisplay.textContent = totalChars;
-  accuracyDisplay.textContent = `${accuracy.toFixed(2)}%`;
+
+  // endGame();
 }
 
 // ゲーム終了処理
@@ -312,6 +311,7 @@ async function endGame() {
   startButton.classList.remove('hidden');
   startButton.textContent = 'もう一度プレイ';
   startButton.disabled = false;
+  skipButton.classList.add('hidden'); // ゲーム終了時は隠す
 }
 
 // HTMLエンティティデコード関数
@@ -319,3 +319,33 @@ function decodeHtmlEntities(text) {
   const doc = new DOMParser().parseFromString(text, 'text/html');
   return doc.documentElement.textContent;
 }
+
+// 翻訳用ヘルパー関数 (MyMemory APIを使用)
+async function translateToJapanese(text) {
+  if (!text) return '';
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`);
+    const data = await res.json();
+    return data.responseData.translatedText;
+  } catch (error) {
+    console.error('翻訳エラー:', error);
+    return text; // 失敗したら元のテキストを返す
+  }
+}
+
+// スキップボタンの処理
+skipButton.addEventListener('click', () => {
+  // 1. 回答を表示する
+  // alertで出すのが一番確実ですが、画面上のメッセージを書き換える形でもOKです
+  alert(`【答え】\n${currentAnswer}`);
+
+  // 2. 次の問題へ進む
+  currentQuestionIndex++;
+
+  // 3. 入力フィールドをリセットして次の問題を出す
+  inputField.value = '';
+  inputField.dataset.lastCorrect = 0;
+  inputField.dataset.prevLength = 0;
+
+  showNextQuestion();
+});
