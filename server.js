@@ -148,6 +148,7 @@ app.get('/api/questions', async (c) => {
   }
 });
 
+/* 20260106 スコア保存用が重複しているためコメントアウト
 // スコア保存用のAPI
 app.post('/api/scores', async (c) => {
   const payload = c.get('jwtPayload');
@@ -164,7 +165,7 @@ app.post('/api/scores', async (c) => {
   // Deno KVに保存 (キー: scores, ユーザー名, 日時)
   await kv.set(['scores', username, Date.now()], record);
   return c.json({ message: 'スコアを保存しました', record });
-});
+});*/
 
 // スコア一覧取得用のAPI
 app.get('/api/scores', async (c) => {

@@ -58,7 +58,7 @@ async function loadRanking() {
         return;
       }
 
-      rankingData.forEach((score, index) => {
+      /*  rankingData.forEach((score, index) => {
         const row = rankingTableBody.insertRow();
         row.insertCell().textContent = index + 1;
         row.insertCell().textContent = score.username;
@@ -72,7 +72,32 @@ async function loadRanking() {
   } catch (error) {
     console.error('ランキング取得エラー:', error);
     rankingStatus.textContent = 'ランキングの取得中にエラーが発生しました。';
-  }
+  } */
+      //20260106 修正
+      rankingData.forEach((scoreData, index) => {
+        // 変数名を scoreData にして混同を避ける
+        const row = rankingTableBody.insertRow();
+        // 1. 順位
+        row.insertCell().textContent = index + 1;
+        // 2. ユーザー名
+        row.insertCell().textContent = scoreData.username || 'Unknown';
+        // 3. WPM (数値でない場合に備えてデフォルト 0 を設定)
+        const wpmVal = Number(scoreData.wpm) || 0;
+        row.insertCell().textContent = wpmVal.toFixed(0);
+        // 4. 正答率 (accuracy がない場合は 0 を表示)
+        const accVal = Number(scoreData.accuracy) || 0;
+        row.insertCell().textContent = `${accVal.toFixed(2)}%`;
+        // 5. スコア
+        const scoreVal = Number(scoreData.score) || 0;
+        row.insertCell().textContent = scoreVal.toFixed(0);
+      });
+    } else {
+      rankingStatus.textContent = 'ランキングの取得に失敗しました。';
+    }
+  } catch (error) {
+    console.error('ランキング取得エラー:', error);
+    rankingStatus.textContent = 'ランキングの取得中にエラーが発生しました。';
+  } //ここまで
 }
 
 // ===================================
