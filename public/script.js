@@ -313,6 +313,11 @@ async function endGame() {
   */
 
   const elapsedSeconds = Math.max(1, Math.floor((Date.now() - startTime) / 1000));
+
+  // 安全に数値に変換（もし空文字やundefinedでも0になるようにする）
+  const correctChars = Number(correctChars) || 0;
+  const totalChars = Number(totalChars) || 0;
+
   const accuracy = totalChars > 0 ? (correctChars / totalChars) * 100 : 0;
   const wpm = correctChars / 5 / (elapsedSeconds / 60);
 
