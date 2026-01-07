@@ -302,12 +302,25 @@ async function endGame() {
   clearInterval(timerInterval);
   inputField.disabled = true;
 
+  //20260107 スコア計算の修正
+  /*
   const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
   const accuracy = totalChars > 0 ? (correctChars / totalChars) * 100 : 0;
   const wpm = elapsedSeconds > 0 ? correctChars / 5 / (elapsedSeconds / 60) : 0;
   const score = correctChars * 10 - (totalChars - correctChars) * 5;
 
   alert(`🎉ゲーム終了🎉\nスコア: ${score.toFixed(0)}\nWPM: ${wpm.toFixed(0)}\n正答率: ${accuracy.toFixed(2)}%`);
+  */
+
+  const elapsedSeconds = Math.max(1, Math.floor((Date.now() - startTime) / 1000));
+  const accuracy = totalChars > 0 ? (correctChars / totalChars) * 100 : 0;
+  const wpm = correctChars / 5 / (elapsedSeconds / 60);
+
+  // スコア計算の修正：パターンBを採用
+  const score = Math.floor(correctChars * 10 * (accuracy / 100));
+
+  alert(`🎉ゲーム終了🎉\nスコア: ${score}\nWPM: ${wpm.toFixed(0)}\n正答率: ${accuracy.toFixed(2)}%`);
+  //20260107 ここまで修正
 
   // スコアをサーバーに保存
   try {
