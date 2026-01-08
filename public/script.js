@@ -58,21 +58,6 @@ async function loadRanking() {
         return;
       }
 
-      /*  rankingData.forEach((score, index) => {
-        const row = rankingTableBody.insertRow();
-        row.insertCell().textContent = index + 1;
-        row.insertCell().textContent = score.username;
-        row.insertCell().textContent = score.wpm.toFixed(0);
-        row.insertCell().textContent = `${score.accuracy.toFixed(2)}%`;
-        row.insertCell().textContent = score.score.toFixed(0);
-      });
-    } else {
-      rankingStatus.textContent = 'ランキングの取得に失敗しました。';
-    }
-  } catch (error) {
-    console.error('ランキング取得エラー:', error);
-    rankingStatus.textContent = 'ランキングの取得中にエラーが発生しました。';
-  } */
       //20260106 修正
       rankingData.forEach((scoreData, index) => {
         // 変数名を scoreData にして混同を避ける
@@ -81,13 +66,10 @@ async function loadRanking() {
         row.insertCell().textContent = index + 1;
         // 2. ユーザー名
         row.insertCell().textContent = scoreData.username || 'Unknown';
-        // 3. WPM (数値でない場合に備えてデフォルト 0 を設定)
-        const wpmVal = Number(scoreData.wpm) || 0;
-        row.insertCell().textContent = wpmVal.toFixed(0);
-        // 4. 正答率 (accuracy がない場合は 0 を表示)
+        // 3. 正答率 (accuracy がない場合は 0 を表示)
         const accVal = Number(scoreData.accuracy) || 0;
         row.insertCell().textContent = `${accVal.toFixed(2)}%`;
-        // 5. スコア
+        // 4. スコア
         const scoreVal = Number(scoreData.score) || 0;
         row.insertCell().textContent = scoreVal.toFixed(0);
       });
@@ -97,7 +79,7 @@ async function loadRanking() {
   } catch (error) {
     console.error('ランキング取得エラー:', error);
     rankingStatus.textContent = 'ランキングの取得中にエラーが発生しました。';
-  } //ここまで
+  }
 }
 
 // ===================================
@@ -112,9 +94,7 @@ const skipButton = document.getElementById('skip-button');
 
 let questions = []; // 取得した問題リスト (questionとanswerを含む)
 let currentQuestionIndex = 0; // 現在の問題番号
-
 let currentAnswer = ''; // 現在の正解文字列
-let expectedKey = ''; // 次に入力すべき文字
 let startTime = 0; // 開始時刻
 let timerInterval = null; // タイマー
 
@@ -122,9 +102,7 @@ let correctChars = 0; // 正しく入力した文字数 (全問題合計)
 let totalChars = 0; // 総入力文字数（間違いを含む、全問題合計）
 
 // 状態表示要素
-// ... (状態表示要素の定義は変更なし) ...
 const timerDisplay = document.getElementById('timer');
-const wpmDisplay = document.getElementById('wpm-display');
 const correctCountDisplay = document.getElementById('correct-count');
 const totalCountDisplay = document.getElementById('total-count');
 const accuracyDisplay = document.getElementById('accuracy-display');
@@ -133,26 +111,22 @@ const accuracyDisplay = document.getElementById('accuracy-display');
 startButton.addEventListener('click', async () => {
   startButton.disabled = true;
   startButton.textContent = '問題を読み込み、翻訳中...'; // メッセージを変更
-
+  // 20260108修正
   try {
     const res = await fetch('/api/questions');
-    if (!res.ok) {
-      throw new Error('質問の取得に失敗しました。');
-    }
-    const rawQuestions = await res.json(); // 一旦変数に受ける
+    if (!res.ok) throw new Error('質問の取得に失敗しました。');
 
+    const rawQuestions = await res.json();
     if (rawQuestions.length === 0) {
       alert('問題が取得できませんでした。');
       return;
     }
 
-    // Promise.all を使って、全問題を並列で翻訳します
+    // 翻訳処理
     questions = await Promise.all(
       rawQuestions.map(async (q) => {
-        // 問題文と回答をデコードしてから翻訳に回す
         const decodedQ = decodeHtmlEntities(q.question);
         const decodedA = decodeHtmlEntities(q.answer);
-
         return {
           question: await translateToJapanese(decodedQ),
           answer: await translateToJapanese(decodedA)
@@ -164,15 +138,17 @@ startButton.addEventListener('click', async () => {
     currentQuestionIndex = 0;
     correctChars = 0;
     totalChars = 0;
+    inputField.dataset.prevLength = 0; // 長さ記録リセット
     startTime = Date.now();
-    clearInterval(timerInterval);
-    skipButton.classList.remove('hidden'); // スキップボタンを表示
 
     // UI表示
+    clearInterval(timerInterval);
     startButton.classList.add('hidden');
     questionArea.classList.remove('hidden');
     statsArea.classList.remove('hidden');
+    skipButton.classList.remove('hidden');
     inputField.disabled = false;
+    inputField.value = '';
     inputField.focus();
 
     // 最初の問題を表示
@@ -188,36 +164,27 @@ startButton.addEventListener('click', async () => {
   }
 });
 
-// 次の問題を表示する (大幅変更)
+// 次の問題を表示する
 function showNextQuestion() {
   if (currentQuestionIndex >= questions.length) {
-    // 全問終了
     endGame();
     return;
   }
 
   const currentQ = questions[currentQuestionIndex];
+  currentAnswer = currentQ.answer; // 翻訳済み
 
-  const rawQuestion = currentQ.question;
-  const decodedQuestion = decodeHtmlEntities(rawQuestion);
-
-  currentAnswer = decodeHtmlEntities(currentQ.answer);
-
-  // 質問文を単なるテキストとして表示
-  displayText.innerHTML = `<p>${decodedQuestion}</p>`;
-
-  // 入力フィールドをクリア
+  displayText.innerHTML = `<p>${currentQ.question}</p>`;
   inputField.value = '';
-
-  // ユーザーにタイピングすべき文字の長さを示唆するために、
-  // 入力フィールドのプレースホルダーを正解の文字数分のアンダーバーで表示
+  inputField.dataset.prevLength = 0;
+  // ヒントとしてアンダーバーを表示
   inputField.placeholder = currentAnswer
     .split('')
     .map(() => '_')
     .join(' ');
 }
 
-// 入力イベントの処理 (大幅変更)
+// 入力イベントの処理
 inputField.addEventListener('input', (e) => {
   const inputText = inputField.value;
   const currentLength = inputText.length;
@@ -288,30 +255,25 @@ inputField.addEventListener('input', (e) => {
 
 // 統計情報を更新し、ゲームが終了した場合はスコアを送信
 function updateStats() {
-  const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+  if (startTime > 0) {
+    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    if (timerDisplay) timerDisplay.textContent = elapsedSeconds;
+  }
+  // 正答率の計算
+  const accuracy = totalChars > 0 ? (correctChars / totalChars) * 100 : 0;
 
-  // UI更新（タイマーだけ常に更新）
-  timerDisplay.textContent = elapsedSeconds;
-
-  // endGame();
+  // DOM要素の更新
+  if (correctCountDisplay) correctCountDisplay.textContent = correctChars;
+  if (totalCountDisplay) totalCountDisplay.textContent = totalChars;
+  if (accuracyDisplay) accuracyDisplay.textContent = `${accuracy.toFixed(1)}%`;
 }
 
 // ゲーム終了処理
 async function endGame() {
-  // ... (元の endGame 関数は変更なし) ...
   clearInterval(timerInterval);
   inputField.disabled = true;
 
   //20260107 スコア計算の修正
-  /*
-  const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-  const accuracy = totalChars > 0 ? (correctChars / totalChars) * 100 : 0;
-  const wpm = elapsedSeconds > 0 ? correctChars / 5 / (elapsedSeconds / 60) : 0;
-  const score = correctChars * 10 - (totalChars - correctChars) * 5;
-
-  alert(`🎉ゲーム終了🎉\nスコア: ${score.toFixed(0)}\nWPM: ${wpm.toFixed(0)}\n正答率: ${accuracy.toFixed(2)}%`);
-  */
-
   const elapsedSeconds = Math.max(1, Math.floor((Date.now() - startTime) / 1000));
 
   // 安全に数値に変換（もし空文字やundefinedでも0になるようにする）
@@ -321,7 +283,7 @@ async function endGame() {
   const accuracy = totalChars > 0 ? (correctChars / totalChars) * 100 : 0;
   const wpm = correctChars / 5 / (elapsedSeconds / 60);
 
-  // スコア計算の修正：パターンBを採用
+  // スコア計算の修正
   const score = Math.floor(correctChars * 10 * (accuracy / 100));
 
   alert(`🎉ゲーム終了🎉\nスコア: ${score}\nWPM: ${wpm.toFixed(0)}\n正答率: ${accuracy.toFixed(2)}%`);
@@ -334,7 +296,7 @@ async function endGame() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         score: score,
-        wpm: wpm,
+        wpm: 0,
         accuracy: accuracy
       })
     });
@@ -351,10 +313,14 @@ async function endGame() {
   }
 
   // ゲームリセットのためのUI
+  questionArea.classList.add('hidden'); // 質問エリア（問題文、入力欄）を隠す
+  statsArea.classList.add('hidden'); // 統計（時間、正答率など）を隠す
+  skipButton.classList.add('hidden'); // スキップボタンを隠す
+
+  // --- 次の準備 ---
   startButton.classList.remove('hidden');
   startButton.textContent = 'もう一度プレイ';
   startButton.disabled = false;
-  skipButton.classList.add('hidden'); // ゲーム終了時は隠す
 }
 
 // HTMLエンティティデコード関数
@@ -379,7 +345,6 @@ async function translateToJapanese(text) {
 // スキップボタンの処理
 skipButton.addEventListener('click', () => {
   // 1. 回答を表示する
-  // alertで出すのが一番確実ですが、画面上のメッセージを書き換える形でもOKです
   alert(`【答え】\n${currentAnswer}`);
 
   // 2. 次の問題へ進む

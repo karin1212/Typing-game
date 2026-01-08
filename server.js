@@ -121,8 +121,6 @@ app.get('/api/check', async (c) => {
 app.get('/api/questions', async (c) => {
   // ログインチェックはjwtミドルウェアによって既に実行済み
   try {
-    // 質問の量を10問から5問に減らし、カテゴリ27(動物)の複数選択式を取得
-    // encode=base64はそのまま (文字化け対策)
     const opentdbUrl = 'https://opentdb.com/api.php?amount=5&category=27&difficulty=medium&type=multiple&encode=base64';
     const res = await fetch(opentdbUrl);
 
@@ -147,25 +145,6 @@ app.get('/api/questions', async (c) => {
     return c.json({ message: 'サーバー側で質問の取得に失敗しました。' });
   }
 });
-
-/* 20260106 スコア保存用が重複しているためコメントアウト
-// スコア保存用のAPI
-app.post('/api/scores', async (c) => {
-  const payload = c.get('jwtPayload');
-  const username = payload.sub;
-  const { score, total } = await c.req.json(); // ゲーム画面から送られてくるデータ
-
-  const record = {
-    username,
-    score,
-    total,
-    date: new Date().toLocaleString('ja-JP')
-  };
-
-  // Deno KVに保存 (キー: scores, ユーザー名, 日時)
-  await kv.set(['scores', username, Date.now()], record);
-  return c.json({ message: 'スコアを保存しました', record });
-});*/
 
 // スコア一覧取得用のAPI
 app.get('/api/scores', async (c) => {
@@ -225,11 +204,7 @@ app.post('/api/scores', async (c) => {
 
 /*** ハイスコアランキングの取得 ***/
 app.get('/api/scores/ranking', async (c) => {
-  // ログインは必須ではないが、データの取得は必要
-  // ユーザー認証ミドルウェアを通っているので、認証されていればpayloadがある
-
-  // 全ユーザーのスコアデータを取得し、ソートする (簡易実装)
-  // Deno KVで効率的なランキング取得は複雑なため、ここでは全件取得後、WPMでソートする簡易な方法を採用します
+  // 全ユーザーのスコアデータを取得し、ソートする
   const allScores = [];
   const iter = kv.list({ prefix: ['scores'] });
   for await (const entry of iter) {
