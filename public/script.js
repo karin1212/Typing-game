@@ -315,14 +315,14 @@ async function endGame() {
   const elapsedSeconds = Math.max(1, Math.floor((Date.now() - startTime) / 1000));
 
   // 安全に数値に変換（もし空文字やundefinedでも0になるようにする）
-  const correctChars = Number(correctChars) || 0;
-  const totalChars = Number(totalChars) || 0;
+  const finalCorrect = Number(correctChars) || 0;
+  const finalTotal = Number(totalChars) || 0;
 
-  const accuracy = totalChars > 0 ? (correctChars / totalChars) * 100 : 0;
-  const wpm = correctChars / 5 / (elapsedSeconds / 60);
+  const accuracy = finalTotal > 0 ? (finalCorrect / finalTotal) * 100 : 0;
+  const wpm = finalCorrect / 5 / (elapsedSeconds / 60);
 
   // スコア計算の修正：パターンBを採用
-  const score = Math.floor(correctChars * 10 * (accuracy / 100));
+  const score = Math.floor(finalCorrect * 10 * (accuracy / 100));
 
   alert(`🎉ゲーム終了🎉\nスコア: ${score}\nWPM: ${wpm.toFixed(0)}\n正答率: ${accuracy.toFixed(2)}%`);
   //20260107 ここまで修正
