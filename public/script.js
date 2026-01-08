@@ -139,6 +139,7 @@ startButton.addEventListener('click', async () => {
     correctChars = 0;
     totalChars = 0;
     inputField.dataset.prevLength = 0; // 長さ記録リセット
+    inputField.dataset.lastCorrect = 0; //20260107 追加　正解文字数リセット
     startTime = Date.now();
 
     // UI表示
@@ -177,6 +178,7 @@ function showNextQuestion() {
   displayText.innerHTML = `<p>${currentQ.question}</p>`;
   inputField.value = '';
   inputField.dataset.prevLength = 0;
+  inputField.dataset.lastCorrect = 0; //20260107 追加　正解文字数リセット
   // ヒントとしてアンダーバーを表示
   inputField.placeholder = currentAnswer
     .split('')
@@ -220,6 +222,7 @@ inputField.addEventListener('input', (e) => {
     feedbackHTML += charSpan;
   }
 
+  /* 20260107 コメントアウト
   if (currentLength > 0 && currentLength <= answerLength) {
     // 現在の問題の正解文字数を一時的にカウント
     const lastInputChar = inputText[currentLength - 1];
@@ -234,9 +237,25 @@ inputField.addEventListener('input', (e) => {
       }
     } else {
       // 不正解 (何もしない、totalCharsは既に増えている)
-      inputField.dataset.lastCorrect = currentLength - 1; // 間違えたら正解文字数はリセット
+      //inputField.dataset.lastCorrect = currentLength - 1; // 間違えたら正解文字数はリセット 20260107 コメントアウト
+    }
+  }*/
+
+  // --- 【ここから修正】正解文字数のカウントロジック ---
+  if (currentLength <= answerLength && currentLength > 0) {
+    const inputChar = inputText[currentLength - 1]; // 今打った文字
+    const expectedChar = currentAnswer[currentLength - 1]; // 本来の文字
+
+    // この問題内で、どこまでポイント付与済みかを取得
+    const lastPointGivenIdx = parseInt(inputField.dataset.lastCorrect || '0');
+
+    // 今打った位置が「まだポイントをもらっていない新しい位置」かつ「正解」なら
+    if (currentLength > lastPointGivenIdx && inputChar === expectedChar) {
+      correctChars++; // 累計正解文字数を +1
+      inputField.dataset.lastCorrect = currentLength; // ポイント付与済み位置を更新
     }
   }
+  // --- 【ここまで】 ---
 
   // 全て入力が完了し、かつ正解しているかチェック
   if (currentLength === answerLength) {
@@ -311,7 +330,7 @@ async function endGame() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         score: score,
-        wpm: 0,
+        wpm: wpm,
         accuracy: accuracy
       })
     });
