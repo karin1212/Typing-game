@@ -204,24 +204,6 @@ main {
   border-color: #2980b9;
 }
 
-/* タイピングのフィードバック */
-#display-text span.next {
-  background-color: #f1c40f; /* 次に入力すべき文字の背景 */
-  border-radius: 2px;
-}
-
-#display-text span.correct {
-  color: #2ecc71; /* 正解の文字色 */
-  font-weight: bold;
-}
-
-#display-text span.incorrect {
-  color: white;
-  background-color: #e74c3c; /* 不正解の背景色 */
-  text-decoration: underline;
-  font-weight: bold;
-}
-
 /* --- 統計情報 --- */
 #stats-area {
   margin-top: 20px;
