@@ -222,26 +222,7 @@ inputField.addEventListener('input', (e) => {
     feedbackHTML += charSpan;
   }
 
-  /* 20260107 コメントアウト
-  if (currentLength > 0 && currentLength <= answerLength) {
-    // 現在の問題の正解文字数を一時的にカウント
-    const lastInputChar = inputText[currentLength - 1];
-    const expectedChar = currentAnswer[currentLength - 1];
-
-    if (lastInputChar === expectedChar) {
-      // 正解
-      if (currentLength > inputField.dataset.lastCorrect) {
-        // 新しい文字が正しく入力された場合のみ、累積正解文字数を増やす
-        correctChars++;
-        inputField.dataset.lastCorrect = currentLength;
-      }
-    } else {
-      // 不正解 (何もしない、totalCharsは既に増えている)
-      //inputField.dataset.lastCorrect = currentLength - 1; // 間違えたら正解文字数はリセット 20260107 コメントアウト
-    }
-  }*/
-
-  // --- 【ここから修正】正解文字数のカウントロジック ---
+  // 正解文字数のカウントロジック
   if (currentLength <= answerLength && currentLength > 0) {
     const inputChar = inputText[currentLength - 1]; // 今打った文字
     const expectedChar = currentAnswer[currentLength - 1]; // 本来の文字
@@ -255,32 +236,25 @@ inputField.addEventListener('input', (e) => {
       inputField.dataset.lastCorrect = currentLength; // ポイント付与済み位置を更新
     }
   }
-  // --- 【ここまで】 ---
+  // ここまで
 
   // 全て入力が完了し、かつ正解しているかチェック
   if (currentLength === answerLength) {
     if (inputText === currentAnswer) {
-      // ✅ 正解した瞬間にだけ統計を更新する
+      // 正解した瞬間にだけ統計を更新する
       updateStats();
 
-      /*
-      alert(`✅ 正解！次の問題へ`);
-      currentQuestionIndex++;
-      setTimeout(showNextQuestion, 100);
-      return;
-      */
-
-      // 2. 画面の描画を確実に行わせるために、ほんの少しだけ遅らせて alert を出す
+      // 2. 画面の描画を確実に行わせるために少しだけ遅らせる
       setTimeout(() => {
         alert(`✅ 正解！次の問題へ`);
         currentQuestionIndex++;
 
-        // 次の問題へ行く際、判定用の値をリセットするのを忘れない
+        // 次の問題へ行く際、判定用の値をリセット
         inputField.dataset.lastCorrect = 0;
         inputField.dataset.prevLength = 0;
 
         showNextQuestion();
-      }, 10); // 10ミリ秒（一瞬）待つだけでブラウザは画面を更新できます
+      }, 10);
       return;
     }
   }
@@ -317,7 +291,7 @@ async function endGame() {
   const accuracy = finalTotal > 0 ? (finalCorrect / finalTotal) * 100 : 0;
   const wpm = finalCorrect / 5 / (elapsedSeconds / 60);
 
-  // スコア計算の修正：パターンBを採用
+  // スコア計算
   const score = Math.floor(finalCorrect * 10 * (accuracy / 100));
 
   alert(`🎉ゲーム終了🎉\nスコア: ${score}\nWPM: ${wpm.toFixed(0)}\n正答率: ${accuracy.toFixed(2)}%`);
