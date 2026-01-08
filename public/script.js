@@ -244,9 +244,24 @@ inputField.addEventListener('input', (e) => {
       // ✅ 正解した瞬間にだけ統計を更新する
       updateStats();
 
+      /*
       alert(`✅ 正解！次の問題へ`);
       currentQuestionIndex++;
       setTimeout(showNextQuestion, 100);
+      return;
+      */
+
+      // 2. 画面の描画を確実に行わせるために、ほんの少しだけ遅らせて alert を出す
+      setTimeout(() => {
+        alert(`✅ 正解！次の問題へ`);
+        currentQuestionIndex++;
+
+        // 次の問題へ行く際、判定用の値をリセットするのを忘れない
+        inputField.dataset.lastCorrect = 0;
+        inputField.dataset.prevLength = 0;
+
+        showNextQuestion();
+      }, 10); // 10ミリ秒（一瞬）待つだけでブラウザは画面を更新できます
       return;
     }
   }
