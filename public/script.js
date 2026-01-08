@@ -297,8 +297,8 @@ function updateStats() {
   const accuracy = totalChars > 0 ? (correctChars / totalChars) * 100 : 0;
 
   // DOM要素の更新
-  if (correctCountDisplay) correctCountDisplay.textContent = correctChars;
-  if (totalCountDisplay) totalCountDisplay.textContent = totalChars;
+  if (correctCountDisplay) correctCountDisplay.textContent = correctChars; //20260108　修正
+  if (totalCountDisplay) totalCountDisplay.textContent = questions.length; //20260108　修正
   if (accuracyDisplay) accuracyDisplay.textContent = `${accuracy.toFixed(1)}%`;
 }
 
