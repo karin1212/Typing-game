@@ -209,9 +209,9 @@ app.get('/api/scores/ranking', async (c) => {
   const iter = kv.list({ prefix: ['scores'] });
   for await (const entry of iter) {
     allScores.push(entry.value);
-  } // WPM (Words Per Minute) の降順でソート
+  }
 
-  allScores.sort((a, b) => b.wpm - a.wpm); // 上位10件を返す
+  allScores.sort((a, b) => b.score - a.score); // 上位10件を返す 20260108 スコアの降順に修正
 
   return c.json(allScores.slice(0, 10));
 });
