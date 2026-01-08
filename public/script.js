@@ -294,8 +294,8 @@ async function endGame() {
   // スコア計算
   const score = Math.floor(finalCorrect * 10 * (accuracy / 100));
 
-  alert(`🎉ゲーム終了🎉\nスコア: ${score}\nWPM: ${wpm.toFixed(0)}\n正答率: ${accuracy.toFixed(2)}%`);
-  //20260107 ここまで修正
+  alert(`🎉ゲーム終了🎉\nスコア: ${score}\n正答率: ${accuracy.toFixed(2)}%`);
+  //20260107 ここまで修正 correctCharsが上手く動作してない
 
   // スコアをサーバーに保存
   try {
