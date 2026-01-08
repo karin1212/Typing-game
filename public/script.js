@@ -198,30 +198,6 @@ inputField.addEventListener('input', (e) => {
   }
   inputField.dataset.prevLength = currentLength; // 以前の長さを保存
 
-  // フィードバック表示をリセットし、現在入力されている文字に基づいて再構築
-  let feedbackHTML = '';
-  let currentCorrectChars = 0;
-
-  for (let i = 0; i < answerLength; i++) {
-    const expectedChar = currentAnswer[i];
-    let charSpan = `<span class="placeholder">${expectedChar}</span>`; // デフォルト（未入力部分）
-
-    if (i < currentLength) {
-      const inputChar = inputText[i];
-
-      if (inputChar === expectedChar) {
-        // 正解
-        charSpan = `<span class="correct">${inputChar}</span>`;
-        currentCorrectChars++;
-      } else {
-        // 不正解
-        charSpan = `<span class="incorrect">${inputChar}</span>`;
-      }
-    }
-
-    feedbackHTML += charSpan;
-  }
-
   // 正解文字数のカウントロジック
   if (currentLength <= answerLength && currentLength > 0) {
     const inputChar = inputText[currentLength - 1]; // 今打った文字
